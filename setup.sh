@@ -55,6 +55,12 @@ else
     cd "$TARGET_DIR"
 fi
 
+# Ensure all scripts have execute permissions
+chmod +x "$TARGET_DIR/update.sh" "$TARGET_DIR/setup.sh" 2>/dev/null || true
+
+# Initialize local version file
+git rev-parse --short HEAD > "$TARGET_DIR/.version" 2>/dev/null || true
+
 echo "=== 6. Building & Launching Stack ==="
 sg docker -c "docker compose up -d --build"
 
