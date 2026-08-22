@@ -1,0 +1,9 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+psutil>=5.9.0
+pynvml>=11.5.0
+requests>=2.31.0
+tencentcloud-sdk-python-tmt==3.0.1130
+pdf2zh
+jinja2
+python-multipart

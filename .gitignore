@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.tar.gz
+/tmp/
+.DS_Store
+.version
