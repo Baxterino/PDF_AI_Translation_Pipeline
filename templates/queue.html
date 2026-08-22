@@ -14,6 +14,9 @@
     .nav-link.active { color: #38bdf8; background: #080c14; border: 1px solid #1e293b; }
     .nav-spacer { margin-left: auto; display: flex; gap: 0.75rem; align-items: center; }
 
+    .btn-update { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-update:hover { background: #0284c7; color: #fff; border-color: #0284c7; }
+
     .btn-purge { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .btn-purge:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
 
@@ -84,11 +87,13 @@
     .author-link:hover { color: #7dd3fc; border-bottom-color: #7dd3fc; text-shadow: 0 0 8px rgba(56, 189, 248, 0.4); }
 
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 10000; justify-content: center; align-items: center; }
-    .modal-card { background: #151d30; border: 1px solid #334155; border-radius: 12px; padding: 1.75rem 2rem; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); }
+    .modal-card { background: #151d30; border: 1px solid #334155; border-radius: 12px; padding: 1.75rem 2rem; max-width: 440px; width: 90%; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); }
     .modal-title { font-size: 1.1rem; font-weight: bold; color: #f8fafc; margin-bottom: 0.5rem; }
     .modal-email { font-size: 0.9rem; color: #38bdf8; background: #080c14; padding: 0.75rem; border-radius: 6px; border: 1px solid #1e293b; margin: 1rem 0; word-break: break-all; font-family: monospace; user-select: all; }
     .modal-close { background: #0284c7; color: #fff; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; width: auto; margin-top: 0.5rem; transition: background 0.2s; }
     .modal-close:hover { background: #0369a1; }
+    .modal-btn-action { background: #10b981; color: #fff; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; width: auto; margin-top: 0.5rem; margin-right: 0.5rem; transition: background 0.2s; }
+    .modal-btn-action:hover { background: #059669; }
   </style>
 </head>
 <body>
@@ -98,6 +103,7 @@
     <a href="/queue" class="nav-link active">Multiple PDFs Translator</a>
     <a href="/text" class="nav-link">Live Text Translator</a>
     <div class="nav-spacer">
+      <button class="btn-update" onclick="manualCheckForUpdates(true)">🔄 Check for Updates</button>
       <button class="btn-purge" onclick="triggerPurge()" title="Flush RAM/VRAM and restart services">⚡ Purge</button>
       <a href="http://localhost:8080" target="_blank" class="btn-stirling">🛠️ Open Stirling PDF Tools ↗</a>
     </div>
@@ -206,6 +212,7 @@
   Made by <span class="author-link" onclick="openAuthorModal()">Stefan Axinte</span>
 </div>
 
+<!-- Author Modal -->
 <div class="modal-overlay" id="authorModal" onclick="closeAuthorModal(event)">
   <div class="modal-card">
     <div class="modal-title">Stefan Axinte</div>
@@ -214,6 +221,18 @@
       Contact: stefan-mihail.axinte@student.tuiasi.ro
     </div>
     <button class="modal-close" onclick="document.getElementById('authorModal').style.display='none'">Close</button>
+  </div>
+</div>
+
+<!-- Update Modal -->
+<div class="modal-overlay" id="updateModal">
+  <div class="modal-card">
+    <div class="modal-title" id="updateModalTitle">Check for Updates</div>
+    <p style="font-size: 0.88rem; color: #94a3b8; margin: 0.75rem 0;" id="updateModalMsg">Checking repository status...</p>
+    <div id="updateActionWrap" style="display: none; margin-top: 1rem;">
+      <button class="modal-btn-action" id="btnInstallUpdate" onclick="applyUpdate()">Install & Rebuild</button>
+    </div>
+    <button class="modal-close" onclick="document.getElementById('updateModal').style.display='none'">Close</button>
   </div>
 </div>
 
@@ -234,6 +253,64 @@
 
   let queue = [];
   let isRunning = false;
+
+  async function manualCheckForUpdates(interactive = false) {
+    try {
+      const res = await fetch('/api/check-update');
+      const data = await res.json();
+      
+      if (!data.configured) {
+        if (interactive) {
+          showUpdateModal("Repository Unset", "Please verify GITHUB_REPO in docker-compose.yml.");
+        }
+        return;
+      }
+
+      if (data.update_available) {
+        showUpdateModal("Update Available!", `A new version (${data.latest_version}) is available: "${data.commit_message}". Would you like to install it?`, true);
+      } else if (interactive) {
+        showUpdateModal("Up to Date", `You are running the latest version (${data.current_version}).`);
+      }
+    } catch(e) {
+      if (interactive) {
+        showUpdateModal("Check Failed", "Could not reach the update service.");
+      }
+    }
+  }
+
+  function showUpdateModal(title, msg, canInstall = false) {
+    document.getElementById('updateModalTitle').innerText = title;
+    document.getElementById('updateModalMsg').innerText = msg;
+    document.getElementById('updateActionWrap').style.display = canInstall ? 'block' : 'none';
+    document.getElementById('updateModal').style.display = 'flex';
+  }
+
+  async function applyUpdate() {
+    document.getElementById('updateModalTitle').innerText = "Installing Update...";
+    document.getElementById('updateModalMsg').innerText = "Pulling repository changes and rebuilding containers. This page will reload when complete...";
+    document.getElementById('updateActionWrap').style.display = 'none';
+
+    try {
+      await fetch('/api/apply-update', { method: 'POST' });
+    } catch(e) {}
+
+    const checkBackOnline = setInterval(async () => {
+      try {
+        const res = await fetch('/api/stats');
+        if (res.ok) {
+          clearInterval(checkBackOnline);
+          window.location.reload();
+        }
+      } catch(e) {}
+    }, 2000);
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    if (!sessionStorage.getItem('update_checked')) {
+      sessionStorage.setItem('update_checked', 'true');
+      manualCheckForUpdates(false);
+    }
+  });
 
   async function triggerPurge() {
     if (!confirm("Are you sure you want to PURGE all allocated RAM/VRAM, terminate active processes, and restart the backend?")) return;

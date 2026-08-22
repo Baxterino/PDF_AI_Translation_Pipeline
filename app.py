@@ -28,6 +28,8 @@ os.makedirs(STORAGE_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=STORAGE_DIR), name="static")
 
 OLLAMA_URL = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
+GITHUB_REPO = os.getenv("GITHUB_REPO", "Baxterino/PDF_AI_Translation_Pipeline")
+CURRENT_VERSION_FILE = "/app/.version"
 
 FONT_MAP = {
     "liberation_serif": "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
@@ -40,6 +42,15 @@ LANG_CODE_MAP = {
     "romanian": "ro",
     "ro": "ro"
 }
+
+def get_current_local_version():
+    if os.path.exists(CURRENT_VERSION_FILE):
+        try:
+            with open(CURRENT_VERSION_FILE, "r") as f:
+                return f.read().strip()
+        except Exception:
+            pass
+    return "initial"
 
 def get_ollama_active_process():
     try:
@@ -175,9 +186,55 @@ async def get_models():
         pass
     return {"models": models_data}
 
+@app.get("/api/check-update")
+async def check_update():
+    current_ver = get_current_local_version()
+    try:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/commits/main"
+        res = requests.get(url, headers={"User-Agent": "FastAPI-Pipeline-Updater"}, timeout=4.0)
+        if res.status_code == 200:
+            commit_data = res.json()
+            remote_sha = commit_data.get("sha", "")[:7]
+            commit_msg = commit_data.get("commit", {}).get("message", "").split("\n")[0]
+            
+            update_available = (remote_sha != current_ver and current_ver != "dev")
+            return JSONResponse({
+                "configured": True,
+                "current_version": current_ver,
+                "latest_version": remote_sha,
+                "commit_message": commit_msg,
+                "update_available": update_available
+            })
+    except Exception as e:
+        return JSONResponse({
+            "configured": True,
+            "current_version": current_ver,
+            "update_available": False,
+            "error": str(e)
+        })
+
+    return JSONResponse({
+        "configured": True,
+        "current_version": current_ver,
+        "update_available": False,
+        "message": "Could not connect to GitHub repository."
+    })
+
+@app.post("/api/apply-update")
+async def apply_update():
+    async def run_updater():
+        await asyncio.sleep(0.5)
+        cmd = ["/bin/bash", "/app_host_mount/update.sh"]
+        subprocess.Popen(cmd, cwd="/app_host_mount")
+
+    asyncio.create_task(run_updater())
+    return JSONResponse({
+        "status": "updating",
+        "message": "Update initiated! Rebuilding containers..."
+    })
+
 @app.post("/api/purge")
 async def purge_system():
-    # 1. Unload model weights from Ollama VRAM/RAM
     try:
         res = requests.get(f"{OLLAMA_URL}/api/ps", timeout=2.0)
         loaded = res.json().get("models", [])
@@ -190,7 +247,6 @@ async def purge_system():
     except Exception:
         pass
 
-    # 2. Kill orphan pdf2zh processes
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
             cmdline = " ".join(proc.info.get('cmdline') or [])
@@ -199,7 +255,6 @@ async def purge_system():
         except Exception:
             pass
 
-    # 3. Wipe temporary translations
     for item in os.listdir(STORAGE_DIR):
         item_path = os.path.join(STORAGE_DIR, item)
         try:
@@ -210,10 +265,8 @@ async def purge_system():
         except Exception:
             pass
 
-    # 4. Trigger GC
     gc.collect()
 
-    # 5. Clean restart of container process
     async def delayed_restart():
         await asyncio.sleep(0.5)
         os._exit(0)
