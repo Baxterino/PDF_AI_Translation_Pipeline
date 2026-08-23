@@ -95,9 +95,11 @@
     .author-link:hover { color: #7dd3fc; border-bottom-color: #7dd3fc; text-shadow: 0 0 8px rgba(56, 189, 248, 0.4); }
 
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 10000; justify-content: center; align-items: center; }
-    .modal-card { background: #151d30; border: 1px solid #334155; border-radius: 12px; padding: 1.75rem 2rem; max-width: 440px; width: 90%; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); }
-    .modal-title { font-size: 1.1rem; font-weight: bold; color: #f8fafc; margin-bottom: 0.5rem; }
-    .modal-email { font-size: 0.9rem; color: #38bdf8; background: #080c14; padding: 0.75rem; border-radius: 6px; border: 1px solid #1e293b; margin: 1rem 0; word-break: break-all; font-family: monospace; user-select: all; }
+    .modal-card { background: #151d30; border: 1px solid #334155; border-radius: 12px; padding: 1.75rem 2rem; max-width: 480px; width: 90%; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); }
+    .modal-title { font-size: 1.15rem; font-weight: bold; color: #f8fafc; margin-bottom: 0.35rem; }
+    .modal-info-box { font-size: 0.85rem; color: #38bdf8; background: #080c14; padding: 0.75rem; border-radius: 6px; border: 1px solid #1e293b; margin: 0.75rem 0; word-break: break-all; font-family: monospace; user-select: all; text-align: left; }
+    .modal-info-box a { color: #38bdf8; text-decoration: none; }
+    .modal-info-box a:hover { text-decoration: underline; }
     .modal-close { background: #0284c7; color: #fff; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; width: auto; margin-top: 0.5rem; transition: background 0.2s; }
     .modal-close:hover { background: #0369a1; }
     .modal-btn-action { background: #10b981; color: #fff; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; width: auto; margin-top: 0.5rem; margin-right: 0.5rem; transition: background 0.2s; }
@@ -256,9 +258,17 @@
   <div class="modal-card">
     <div class="modal-title">Stefan Axinte</div>
     <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Developer & Pipeline Maintainer</p>
-    <div class="modal-email">
-      Contact: stefan-mihail.axinte@student.tuiasi.ro
+    
+    <div class="modal-info-box">
+      <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.2rem;">EMAIL CONTACT:</div>
+      <div>stefan-mihail.axinte@student.tuiasi.ro</div>
     </div>
+
+    <div class="modal-info-box">
+      <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.2rem;">GITHUB REPOSITORY:</div>
+      <a href="https://github.com/Baxterino/PDF_AI_Translation_Pipeline" target="_blank">github.com/Baxterino/PDF_AI_Translation_Pipeline ↗</a>
+    </div>
+
     <button class="modal-close" onclick="document.getElementById('authorModal').style.display='none'">Close</button>
   </div>
 </div>
@@ -353,7 +363,6 @@
     }, 2000);
   }
 
-  // Automated session check
   window.addEventListener('DOMContentLoaded', () => {
     if (!sessionStorage.getItem('update_checked')) {
       sessionStorage.setItem('update_checked', 'true');
