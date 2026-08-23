@@ -6,29 +6,44 @@
   <title>Live Text Translator - Local AI</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0f19; color: #f8fafc; margin: 0; padding: 2rem; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
-    .container { width: 100%; max-width: 1400px; background: #151d30; padding: 2rem; border-radius: 12px; border: 1px solid #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+    
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 6px #10b981; opacity: 1; }
+      50% { box-shadow: 0 0 14px #34d399; opacity: 0.7; }
+    }
+    @keyframes subtlePulse {
+      0%, 100% { border-color: #1e293b; }
+      50% { border-color: #0284c7; box-shadow: 0 0 12px rgba(2,132,199,0.2); }
+    }
+
+    .container { width: 100%; max-width: 1400px; background: #151d30; padding: 2rem; border-radius: 12px; border: 1px solid #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.6); animation: fadeInUp 0.4s ease-out; }
     
     .nav-bar { display: flex; gap: 1rem; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 1.25rem; margin-bottom: 1.5rem; }
-    .nav-link { color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.95rem; padding: 0.5rem 1rem; border-radius: 6px; transition: 0.2s; }
-    .nav-link:hover { color: #fff; background: #1e293b; }
+    .nav-link { color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.95rem; padding: 0.5rem 1rem; border-radius: 6px; transition: all 0.25s ease; }
+    .nav-link:hover { color: #fff; background: #1e293b; transform: translateY(-1px); }
     .nav-link.active { color: #38bdf8; background: #080c14; border: 1px solid #1e293b; }
     .nav-spacer { margin-left: auto; display: flex; gap: 0.75rem; align-items: center; }
 
-    .btn-update { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-    .btn-update:hover { background: #0284c7; color: #fff; border-color: #0284c7; }
+    .btn-update { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    .btn-update:hover { background: #0284c7; color: #fff; border-color: #0284c7; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(2,132,199,0.3); }
 
-    .btn-purge { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-    .btn-purge:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+    .btn-purge { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    .btn-purge:hover { background: #ef4444; color: #fff; border-color: #ef4444; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
 
-    .btn-stirling { display: inline-flex; align-items: center; gap: 0.5rem; background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; }
-    .btn-stirling:hover { background: #334155; color: #fff; border-color: #38bdf8; }
+    .btn-stirling { display: inline-flex; align-items: center; gap: 0.5rem; background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: all 0.2s ease; }
+    .btn-stirling:hover { background: #334155; color: #fff; border-color: #38bdf8; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(56,189,248,0.2); }
 
     .stats-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-    .stat-card { background: #0d1322; border: 1px solid #1e293b; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between; }
+    .stat-card { background: #0d1322; border: 1px solid #1e293b; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.25s ease; }
+    .stat-card:hover { border-color: #334155; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
     .stat-header { display: flex; justify-content: space-between; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
     .stat-val { font-weight: bold; color: #38bdf8; }
     .stat-meter { background: #1e293b; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 0.75rem; }
-    .stat-fill { height: 100%; width: 0%; background: #38bdf8; transition: width 0.4s ease; }
+    .stat-fill { height: 100%; width: 0%; background: #38bdf8; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
     .stat-fill.warn { background: #f59e0b; }
     .stat-fill.crit { background: #ef4444; }
 
@@ -39,49 +54,52 @@
     .model-telemetry { background: #0d1322; border: 1px solid #1e293b; border-radius: 8px; padding: 0.85rem 1.2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
     .tele-item span:first-child { color: #64748b; margin-right: 0.35rem; }
     .tele-item span:last-child { color: #38bdf8; font-weight: 600; }
-    .pill { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #64748b; margin-right: 0.4rem; }
-    .pill.active { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    .pill { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #64748b; margin-right: 0.4rem; transition: all 0.3s ease; }
+    .pill.active { background: #10b981; animation: pulseGlow 2s infinite ease-in-out; }
 
-    .model-control-card { background: #0d1322; border: 1px solid #1e293b; border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
+    .model-control-card { background: #0d1322; border: 1px solid #1e293b; border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; transition: all 0.25s ease; }
+    .model-control-card:hover { border-color: #334155; transform: translateY(-2px); }
     .model-control-card label { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem; display: block; }
-    .model-control-card select { width: 100%; padding: 0.65rem; border-radius: 6px; background: #0b0f19; border: 1px solid #334155; color: #fff; }
+    .model-control-card select { width: 100%; padding: 0.65rem; border-radius: 6px; background: #0b0f19; border: 1px solid #334155; color: #fff; transition: all 0.2s ease; }
+    .model-control-card select:focus { outline: none; border-color: #38bdf8; }
     #model-advice { font-size: 0.8rem; margin-top: 0.35rem; }
 
     .translate-workbench { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
-    .pane-card { background: #0d1322; border: 1px solid #1e293b; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; }
+    .pane-card { background: #0d1322; border: 1px solid #1e293b; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; transition: all 0.25s ease; }
+    .pane-card.active-stream { animation: subtlePulse 2s infinite ease-in-out; }
     
     .pane-toolbar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 0.75rem; margin-bottom: 0.75rem; }
     .lang-select { background: #080c14; border: 1px solid #334155; color: #38bdf8; font-weight: 600; font-size: 0.85rem; border-radius: 4px; padding: 0.35rem 0.6rem; }
     
-    .btn-swap { background: #1e293b; border: 1px solid #334155; color: #38bdf8; border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.9rem; cursor: pointer; transition: 0.2s; font-weight: bold; }
-    .btn-swap:hover { background: #334155; color: #fff; }
+    .btn-swap { background: #1e293b; border: 1px solid #334155; color: #38bdf8; border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.9rem; cursor: pointer; transition: all 0.25s ease; font-weight: bold; }
+    .btn-swap:hover { background: #334155; color: #fff; transform: rotate(180deg); }
 
     textarea { width: 100%; height: 260px; background: transparent; border: none; color: #f8fafc; font-size: 1rem; line-height: 1.6; resize: vertical; outline: none; font-family: inherit; box-sizing: border-box; }
     .output-area { width: 100%; height: 260px; color: #f8fafc; font-size: 1rem; line-height: 1.6; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
     .output-placeholder { color: #64748b; font-style: italic; }
 
     .pane-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1e293b; padding-top: 0.75rem; margin-top: auto; font-size: 0.8rem; color: #64748b; }
-    .btn-tool { background: transparent; border: 1px solid #334155; color: #94a3b8; border-radius: 4px; padding: 0.3rem 0.6rem; cursor: pointer; font-size: 0.75rem; transition: 0.2s; }
-    .btn-tool:hover { background: #1e293b; color: #38bdf8; }
+    .btn-tool { background: transparent; border: 1px solid #334155; color: #94a3b8; border-radius: 4px; padding: 0.3rem 0.6rem; cursor: pointer; font-size: 0.75rem; transition: all 0.2s ease; }
+    .btn-tool:hover { background: #1e293b; color: #38bdf8; transform: translateY(-1px); }
 
-    #btn-translate-text { width: 100%; margin-top: 1.5rem; padding: 0.85rem; border-radius: 6px; border: none; background: #0284c7; color: white; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
-    #btn-translate-text:hover { background: #0369a1; }
-    #btn-translate-text:disabled { background: #475569; cursor: not-allowed; }
+    #btn-translate-text { width: 100%; margin-top: 1.5rem; padding: 0.85rem; border-radius: 6px; border: none; background: #0284c7; color: white; font-weight: bold; font-size: 1rem; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+    #btn-translate-text:hover:not(:disabled) { background: #0369a1; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(2,132,199,0.35); }
+    #btn-translate-text:disabled { background: #475569; cursor: not-allowed; opacity: 0.7; }
 
     .attribution-footer { margin-top: 1.5rem; margin-bottom: 1.5rem; text-align: center; font-size: 0.85rem; color: #64748b; letter-spacing: 0.03em; user-select: none; }
     .author-link { color: #38bdf8; font-weight: 600; cursor: pointer; border-bottom: 1px dashed rgba(56, 189, 248, 0.4); transition: all 0.2s ease; padding-bottom: 1px; }
     .author-link:hover { color: #7dd3fc; border-bottom-color: #7dd3fc; text-shadow: 0 0 8px rgba(56, 189, 248, 0.4); }
 
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 10000; justify-content: center; align-items: center; }
-    .modal-card { background: #151d30; border: 1px solid #334155; border-radius: 12px; padding: 1.75rem 2rem; max-width: 480px; width: 90%; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); z-index: 10000; justify-content: center; align-items: center; }
+    .modal-card { background: #151d30; border: 1px solid #334155; border-radius: 12px; padding: 1.75rem 2rem; max-width: 480px; width: 90%; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); animation: fadeInUp 0.25s ease-out; }
     .modal-title { font-size: 1.15rem; font-weight: bold; color: #f8fafc; margin-bottom: 0.35rem; }
     .modal-info-box { font-size: 0.85rem; color: #38bdf8; background: #080c14; padding: 0.75rem; border-radius: 6px; border: 1px solid #1e293b; margin: 0.75rem 0; word-break: break-all; font-family: monospace; user-select: all; text-align: left; }
-    .modal-info-box a { color: #38bdf8; text-decoration: none; }
-    .modal-info-box a:hover { text-decoration: underline; }
-    .modal-close { background: #0284c7; color: #fff; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; width: auto; margin-top: 0.5rem; transition: background 0.2s; }
-    .modal-close:hover { background: #0369a1; }
-    .modal-btn-action { background: #10b981; color: #fff; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; width: auto; margin-top: 0.5rem; margin-right: 0.5rem; transition: background 0.2s; }
-    .modal-btn-action:hover { background: #059669; }
+    .modal-info-box a { color: #38bdf8; text-decoration: none; transition: color 0.2s ease; }
+    .modal-info-box a:hover { color: #7dd3fc; text-decoration: underline; }
+    .modal-close { background: #0284c7; color: #fff; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; width: auto; margin-top: 0.5rem; transition: all 0.2s ease; }
+    .modal-close:hover { background: #0369a1; transform: translateY(-1px); }
+    .modal-btn-action { background: #10b981; color: #fff; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; width: auto; margin-top: 0.5rem; margin-right: 0.5rem; transition: all 0.2s ease; }
+    .modal-btn-action:hover { background: #059669; transform: translateY(-1px); }
   </style>
 </head>
 <body>
@@ -159,7 +177,7 @@
       </div>
     </div>
 
-    <div class="pane-card">
+    <div class="pane-card" id="tgt-card">
       <div class="pane-toolbar">
         <div>
           <span style="font-size: 0.85rem; color: #94a3b8; margin-right: 0.4rem;">Target:</span>
@@ -186,7 +204,6 @@
   Made by <span class="author-link" onclick="openAuthorModal()">Stefan Axinte</span>
 </div>
 
-<!-- Author Modal -->
 <div class="modal-overlay" id="authorModal" onclick="closeAuthorModal(event)">
   <div class="modal-card">
     <div class="modal-title">Stefan Axinte</div>
@@ -206,7 +223,6 @@
   </div>
 </div>
 
-<!-- Update Modal -->
 <div class="modal-overlay" id="updateModal">
   <div class="modal-card">
     <div class="modal-title" id="updateModalTitle">Check for Updates</div>
@@ -221,6 +237,7 @@
 <script>
   const srcText = document.getElementById('src-text');
   const tgtText = document.getElementById('tgt-text');
+  const tgtCard = document.getElementById('tgt-card');
   const srcLang = document.getElementById('src-lang');
   const tgtLang = document.getElementById('tgt-lang');
   const btnTranslate = document.getElementById('btn-translate-text');
@@ -457,6 +474,7 @@
     isTranslating = true;
     btnTranslate.disabled = true;
     tgtText.innerText = '';
+    tgtCard.classList.add('active-stream');
     streamStatus.innerText = 'Translating...';
 
     const formData = new FormData();
@@ -499,6 +517,7 @@
     } finally {
       isTranslating = false;
       btnTranslate.disabled = false;
+      tgtCard.classList.remove('active-stream');
     }
   }
 </script>
