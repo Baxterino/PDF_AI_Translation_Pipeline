@@ -13,7 +13,15 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     sed \
     curl \
+    git \
+    docker.io \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Docker Compose CLI plugin directly
+RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
+    curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose && \
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose && \
+    ln -s /usr/local/lib/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
 
 WORKDIR /app
 

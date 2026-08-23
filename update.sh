@@ -3,6 +3,9 @@ set -e
 
 cd "$(dirname "$0")"
 
+# Avoid git dubious ownership errors inside Docker containers
+git config --global --add safe.directory "*" 2>/dev/null || true
+
 echo "=== 1. Fetching Latest Changes from GitHub ==="
 if [ -d ".git" ]; then
     git fetch origin main
