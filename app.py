@@ -29,7 +29,7 @@ app.mount("/static", StaticFiles(directory=STORAGE_DIR), name="static")
 
 OLLAMA_URL = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "Baxterino/PDF_AI_Translation_Pipeline")
-CURRENT_VERSION_FILE = "/app/.version"
+CURRENT_VERSION_FILE = "/app_host_mount/.version"
 
 FONT_MAP = {
     "liberation_serif": "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
@@ -224,8 +224,12 @@ async def check_update():
 async def apply_update():
     async def run_updater():
         await asyncio.sleep(0.5)
-        cmd = ["/bin/bash", "/app_host_mount/update.sh"]
-        subprocess.Popen(cmd, cwd="/app_host_mount")
+        subprocess.Popen(
+            "nohup /bin/bash /app_host_mount/update.sh > /dev/null 2>&1 &",
+            shell=True,
+            cwd="/app_host_mount",
+            start_new_session=True
+        )
 
     asyncio.create_task(run_updater())
     return JSONResponse({
