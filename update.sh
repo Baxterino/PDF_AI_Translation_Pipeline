@@ -4,6 +4,17 @@ set -e
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_DIR"
 
+LOCK_FILE="/tmp/pipeline_updating.lock"
+
+# Concurrency check
+if [ -f "$LOCK_FILE" ]; then
+    echo "[$(date)] Update already in progress. Exiting duplicate process."
+    exit 0
+fi
+
+touch "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT
+
 exec >> "$REPO_DIR/update.log" 2>&1
 
 echo "[$(date)] === 1. Fetching Latest Changes from GitHub ==="
@@ -19,8 +30,9 @@ fi
 
 git rev-parse --short HEAD > .version 2>/dev/null || true
 
-echo "[$(date)] === 2. Rebuilding and Restarting Container Stack ==="
-docker compose up -d --build --remove-orphans
+echo "[$(date)] === 2. Force-Rebuilding Containers (No Cache) ==="
+docker compose build --no-cache pdf-translator
+docker compose up -d --remove-orphans
 
 echo "[$(date)] === 3. Cleaning up dangling images ==="
 docker image prune -f

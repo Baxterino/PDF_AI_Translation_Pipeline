@@ -32,6 +32,7 @@ app.mount("/static", StaticFiles(directory=STORAGE_DIR), name="static")
 OLLAMA_URL = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "Baxterino/PDF_AI_Translation_Pipeline")
 CURRENT_VERSION_FILE = "/app_host_mount/.version"
+UPDATE_LOCK_FILE = "/tmp/pipeline_updating.lock"
 
 FONT_MAP = {
     "liberation_serif": "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
@@ -228,6 +229,12 @@ async def check_update():
 
 @app.post("/api/apply-update")
 async def apply_update():
+    if os.path.exists(UPDATE_LOCK_FILE):
+        return JSONResponse(
+            {"status": "busy", "message": "An update is already running in background."},
+            status_code=429
+        )
+
     async def run_updater():
         await asyncio.sleep(0.5)
         subprocess.Popen(
