@@ -13,6 +13,8 @@ from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
+from ocr_engine import process_vector_pdf_sync
+
 try:
     import pynvml
     pynvml.nvmlInit()
@@ -156,6 +158,10 @@ async def queue_page(request: Request):
 @app.get("/text", response_class=HTMLResponse)
 async def text_translator_page(request: Request):
     return templates.TemplateResponse("text.html", {"request": request})
+
+@app.get("/ocr", response_class=HTMLResponse)
+async def ocr_page(request: Request):
+    return templates.TemplateResponse("ocr.html", {"request": request})
 
 @app.get("/api/stats")
 async def get_system_stats():
@@ -319,6 +325,57 @@ async def direct_text_translation(
             yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
 
     return StreamingResponse(stream_ollama(), media_type="text/event-stream")
+
+@app.post("/api/ocr-process")
+async def start_ocr_process(file: UploadFile = File(...)):
+    session_id = tempfile.mkdtemp(dir=STORAGE_DIR)
+    input_file_path = os.path.join(session_id, file.filename)
+    clean_name = os.path.splitext(file.filename)[0] + "_Vector.pdf"
+    output_file_path = os.path.join(session_id, clean_name)
+
+    with open(input_file_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    async def event_stream():
+        loop = asyncio.get_event_loop()
+        queue = asyncio.Queue()
+
+        def progress_callback(current, total):
+            pct = int((current / total) * 100)
+            asyncio.run_coroutine_threadsafe(
+                queue.put({"type": "progress", "value": pct, "info": f"Processing Page {current} of {total}"}),
+                loop
+            )
+
+        async def run_worker():
+            try:
+                await loop.run_in_executor(
+                    None, 
+                    process_vector_pdf_sync, 
+                    input_file_path, 
+                    output_file_path, 
+                    progress_callback
+                )
+                await queue.put({"type": "done"})
+            except Exception as e:
+                await queue.put({"type": "error", "message": str(e)})
+
+        asyncio.create_task(run_worker())
+
+        while True:
+            item = await queue.get()
+            if item["type"] == "progress":
+                yield f"data: {json.dumps(item)}\n\n"
+            elif item["type"] == "done":
+                orig_url = f"/static/{os.path.basename(session_id)}/{os.path.basename(input_file_path)}"
+                mod_url = f"/static/{os.path.basename(session_id)}/{clean_name}"
+                yield f"data: {json.dumps({'type': 'done', 'original': orig_url, 'modified': mod_url})}\n\n"
+                break
+            elif item["type"] == "error":
+                yield f"data: {json.dumps({'type': 'error', 'message': item['message']})}\n\n"
+                break
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 @app.post("/api/translate")
 async def start_translation(

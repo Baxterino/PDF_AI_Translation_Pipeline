@@ -7,3 +7,6 @@ tencentcloud-sdk-python-tmt==3.0.1130
 pdf2zh
 jinja2
 python-multipart
+pymupdf>=1.23.0
+pytesseract
+opencv-python-headless

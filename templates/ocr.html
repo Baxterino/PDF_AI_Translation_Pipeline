@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCR Vector Extractor - Local AI</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0f19; color: #f8fafc; margin: 0; padding: 2rem; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
+    
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+    .container { width: 100%; max-width: 1400px; background: #151d30; padding: 2rem; border-radius: 12px; border: 1px solid #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.6); animation: fadeInUp 0.4s ease-out; }
+    
+    .nav-bar { display: flex; gap: 1rem; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 1.25rem; margin-bottom: 1.5rem; }
+    .nav-link { color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.95rem; padding: 0.5rem 1rem; border-radius: 6px; transition: all 0.25s ease; }
+    .nav-link:hover { color: #fff; background: #1e293b; transform: translateY(-1px); }
+    .nav-link.active { color: #38bdf8; background: #080c14; border: 1px solid #1e293b; }
+    .nav-spacer { margin-left: auto; display: flex; gap: 0.75rem; align-items: center; }
+
+    .btn-update { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    .btn-update:hover { background: #0284c7; color: #fff; border-color: #0284c7; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(2,132,199,0.3); }
+
+    .btn-purge { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    .btn-purge:hover { background: #ef4444; color: #fff; border-color: #ef4444; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+
+    .btn-stirling { display: inline-flex; align-items: center; gap: 0.5rem; background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: all 0.2s ease; }
+    .btn-stirling:hover { background: #334155; color: #fff; border-color: #38bdf8; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(56,189,248,0.2); }
+
+    .stats-bar { margin-bottom: 1.5rem; }
+    .stat-card { background: #0d1322; border: 1px solid #1e293b; border-radius: 8px; padding: 1rem 1.25rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.25s ease; }
+    .stat-card:hover { border-color: #334155; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
+    .stat-header { display: flex; justify-content: space-between; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+    .stat-val { font-weight: bold; color: #38bdf8; }
+    .stat-meter { background: #1e293b; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 0.4rem; }
+    .stat-fill { height: 100%; width: 0%; background: #38bdf8; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+    .stat-fill.warn { background: #f59e0b; }
+    .stat-fill.crit { background: #ef4444; }
+
+    .dropzone { border: 2px dashed #334155; border-radius: 8px; padding: 2.5rem; text-align: center; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); background: #0d1322; }
+    .dropzone:hover { border-color: #38bdf8; background: #101728; transform: translateY(-2px); }
+    .dropzone.dragover { border-color: #38bdf8; background: #131b2e; transform: scale(1.01); }
+
+    #btn-extract { width: 100%; margin-top: 1.5rem; padding: 0.85rem; border-radius: 6px; border: none; background: #0284c7; color: white; font-weight: bold; font-size: 1rem; cursor: pointer; transition: all 0.25s ease; }
+    #btn-extract:hover:not(:disabled) { background: #0369a1; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(2,132,199,0.35); }
+    #btn-extract:disabled { background: #475569; cursor: not-allowed; opacity: 0.7; }
+
+    .progress-section { margin-top: 1.5rem; display: none; }
+    .progress-header { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.4rem; color: #38bdf8; }
+    .progress-bar-container { background: #1e293b; height: 16px; border-radius: 8px; overflow: hidden; }
+    .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #0284c7, #38bdf8, #0284c7); background-size: 200% 100%; animation: shimmer 2s infinite linear; transition: width 0.3s ease; }
+
+    .preview-container { display: none; margin-top: 2rem; border-top: 1px solid #334155; padding-top: 1.5rem; }
+    .viewer-toolbar { display: flex; justify-content: space-between; align-items: center; background: #0d1322; border: 1px solid #1e293b; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1rem; }
+    .viewer-nav { display: flex; align-items: center; gap: 0.75rem; }
+    .viewer-nav button { padding: 0.4rem 0.9rem; font-size: 0.85rem; background: #1e293b; border: 1px solid #334155; color: #fff; cursor: pointer; border-radius: 4px; transition: all 0.2s ease; }
+    .viewer-nav button:hover:not(:disabled) { background: #334155; transform: translateY(-1px); }
+    .viewer-nav span { font-size: 0.9rem; color: #94a3b8; font-family: monospace; }
+    
+    .spread-canvas-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; background: #080c14; padding: 1rem; border-radius: 8px; border: 1px solid #1e293b; }
+    .page-col { display: flex; flex-direction: column; align-items: center; }
+    .page-col-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #38bdf8; }
+    canvas { max-width: 100%; height: auto; border: 1px solid #334155; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); background: #ffffff; }
+
+    .downloads-bar { display: flex; gap: 1rem; margin-top: 1rem; }
+    .downloads-bar a { flex: 1; text-align: center; text-decoration: none; background: #10b981; border: 1px solid #059669; color: #fff; padding: 0.75rem; border-radius: 6px; font-weight: 600; font-size: 0.95rem; transition: all 0.2s ease; }
+    .downloads-bar a:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+
+    .attribution-footer { margin-top: 1.5rem; margin-bottom: 1.5rem; text-align: center; font-size: 0.85rem; color: #64748b; letter-spacing: 0.03em; user-select: none; }
+    .author-link { color: #38bdf8; font-weight: 600; cursor: pointer; border-bottom: 1px dashed rgba(56, 189, 248, 0.4); transition: all 0.2s ease; padding-bottom: 1px; }
+    .author-link:hover { color: #7dd3fc; border-bottom-color: #7dd3fc; text-shadow: 0 0 8px rgba(56, 189, 248, 0.4); }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); z-index: 10000; justify-content: center; align-items: center; }
+    .modal-card { background: #151d30; border: 1px solid #334155; border-radius: 12px; padding: 1.75rem 2rem; max-width: 480px; width: 90%; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); animation: fadeInUp 0.25s ease-out; }
+    .modal-title { font-size: 1.15rem; font-weight: bold; color: #f8fafc; margin-bottom: 0.35rem; }
+    .modal-info-box { font-size: 0.85rem; color: #38bdf8; background: #080c14; padding: 0.75rem; border-radius: 6px; border: 1px solid #1e293b; margin: 0.75rem 0; word-break: break-all; font-family: monospace; user-select: all; text-align: left; }
+    .modal-info-box a { color: #38bdf8; text-decoration: none; transition: color 0.2s ease; }
+    .modal-info-box a:hover { color: #7dd3fc; text-decoration: underline; }
+    .modal-close { background: #0284c7; color: #fff; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; width: auto; margin-top: 0.5rem; transition: all 0.2s ease; }
+    .modal-close:hover { background: #0369a1; transform: translateY(-1px); }
+    .modal-btn-action { background: #10b981; color: #fff; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; width: auto; margin-top: 0.5rem; margin-right: 0.5rem; transition: all 0.2s ease; }
+    .modal-btn-action:hover { background: #059669; transform: translateY(-1px); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="nav-bar">
+    <a href="/" class="nav-link">Single PDF Translator</a>
+    <a href="/queue" class="nav-link">Multiple PDFs Translator</a>
+    <a href="/text" class="nav-link">Live Text Translator</a>
+    <a href="/ocr" class="nav-link active">OCR Vector Extractor</a>
+    <div class="nav-spacer">
+      <button class="btn-update" onclick="manualCheckForUpdates(true)">🔄 Check for Updates</button>
+      <button class="btn-purge" onclick="triggerPurge()" title="Flush RAM/VRAM and restart services">⚡ Purge</button>
+      <a href="http://localhost:8080" target="_blank" class="btn-stirling">🛠️ Open Stirling PDF Tools ↗</a>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div>
+        <div class="stat-header">
+          <span>Host RAM</span>
+          <span class="stat-val" id="ram-txt">0 / 0 GB (0%)</span>
+        </div>
+        <div class="stat-meter"><div class="stat-fill" id="ram-fill"></div></div>
+      </div>
+      <div style="font-size: 0.75rem; color: #64748b;">System memory allocation</div>
+    </div>
+  </div>
+
+  <h2>OCR & Inpaint Vector Extractor</h2>
+  <p style="color: #94a3b8; font-size: 0.9rem; margin-top: -0.5rem; margin-bottom: 1.5rem;">
+    Upload scanned image-only PDFs to strip rasterized text pixels via background inpainting and re-inject selectable, searchable vector text blocks.
+  </p>
+
+  <div class="dropzone" id="dropzone">
+    <p id="file-label" style="margin:0; font-size: 1.05rem;">Drag & Drop your Scanned PDF here, or click to browse</p>
+    <input type="file" id="file-input" accept="application/pdf" style="display:none">
+  </div>
+
+  <button id="btn-extract">Extract Text From Images</button>
+
+  <div class="progress-section" id="prog-wrap">
+    <div class="progress-header">
+      <span id="prog-info">Processing OCR & Inpainting...</span>
+      <span id="prog-num">0%</span>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="prog-bar"></div>
+    </div>
+  </div>
+
+  <div class="preview-container" id="previews">
+    <div class="viewer-toolbar">
+      <div class="viewer-nav">
+        <button id="btn-prev" onclick="prevSlide()">◀ Previous Slide</button>
+        <span id="slide-counter">Slide 1 / --</span>
+        <button id="btn-next" onclick="nextSlide()">Next Slide ▶</button>
+      </div>
+      <div>
+        <span style="font-size: 0.85rem; color: #94a3b8;">Original Scan (Left) vs Searchable Vector (Right)</span>
+      </div>
+    </div>
+
+    <div class="spread-canvas-wrap">
+      <div class="page-col">
+        <div class="page-col-title" id="title-left">🖼️ Original Scan (Slide 1)</div>
+        <canvas id="canvas-left"></canvas>
+      </div>
+      <div class="page-col">
+        <div class="page-col-title" id="title-right">✨ Modified Vector (Slide 1)</div>
+        <canvas id="canvas-right"></canvas>
+      </div>
+    </div>
+
+    <div class="downloads-bar">
+      <a id="dl-mod" href="#" download>⬇ Download Clean Modified PDF (Searchable Vector)</a>
+    </div>
+  </div>
+</div>
+
+<div class="attribution-footer">
+  Made by <span class="author-link" onclick="openAuthorModal()">Stefan Axinte</span>
+</div>
+
+<div class="modal-overlay" id="authorModal" onclick="closeAuthorModal(event)">
+  <div class="modal-card">
+    <div class="modal-title">Stefan Axinte</div>
+    <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">Developer & Pipeline Maintainer</p>
+    
+    <div class="modal-info-box">
+      <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.2rem;">EMAIL CONTACT:</div>
+      <div>stefan-mihail.axinte@student.tuiasi.ro</div>
+    </div>
+
+    <div class="modal-info-box">
+      <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.2rem;">GITHUB REPOSITORY:</div>
+      <a href="https://github.com/Baxterino/PDF_AI_Translation_Pipeline" target="_blank">github.com/Baxterino/PDF_AI_Translation_Pipeline ↗</a>
+    </div>
+
+    <button class="modal-close" onclick="document.getElementById('authorModal').style.display='none'">Close</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="updateModal">
+  <div class="modal-card">
+    <div class="modal-title" id="updateModalTitle">Check for Updates</div>
+    <p style="font-size: 0.88rem; color: #94a3b8; margin: 0.75rem 0;" id="updateModalMsg">Checking repository status...</p>
+    <div id="updateActionWrap" style="display: none; margin-top: 1rem;">
+      <button class="modal-btn-action" id="btnInstallUpdate" onclick="applyUpdate()">Install & Rebuild</button>
+    </div>
+    <button class="modal-close" onclick="document.getElementById('updateModal').style.display='none'">Close</button>
+  </div>
+</div>
+
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const fileInput = document.getElementById('file-input');
+  const dropzone = document.getElementById('dropzone');
+  const btn = document.getElementById('btn-extract');
+  
+  let origDoc = null;
+  let modDoc = null;
+  let currentSlide = 1;
+  let totalSlides = 0;
+
+  async function manualCheckForUpdates(interactive = false) {
+    try {
+      const res = await fetch('/api/check-update');
+      const data = await res.json();
+      
+      if (!data.configured) {
+        if (interactive) showUpdateModal("Repository Unset", "Please verify GITHUB_REPO in docker-compose.yml.");
+        return;
+      }
+
+      if (data.update_available) {
+        showUpdateModal("Update Available!", `A new version (${data.latest_version}) is available: "${data.commit_message}". Would you like to install it?`, true);
+      } else if (interactive) {
+        showUpdateModal("Up to Date", `You are running the latest version (${data.current_version}).`);
+      }
+    } catch(e) {
+      if (interactive) showUpdateModal("Check Failed", "Could not reach the update service.");
+    }
+  }
+
+  function showUpdateModal(title, msg, canInstall = false) {
+    document.getElementById('updateModalTitle').innerText = title;
+    document.getElementById('updateModalMsg').innerText = msg;
+    document.getElementById('updateActionWrap').style.display = canInstall ? 'block' : 'none';
+    document.getElementById('updateModal').style.display = 'flex';
+  }
+
+  async function applyUpdate() {
+    document.getElementById('updateModalTitle').innerText = "Installing Update...";
+    document.getElementById('updateModalMsg').innerText = "Pulling repository changes and rebuilding containers. This page will reload when complete...";
+    document.getElementById('updateActionWrap').style.display = 'none';
+
+    try { await fetch('/api/apply-update', { method: 'POST' }); } catch(e) {}
+
+    const check = setInterval(async () => {
+      try {
+        const res = await fetch('/api/stats');
+        if (res.ok) { clearInterval(check); window.location.reload(); }
+      } catch(e) {}
+    }, 2000);
+  }
+
+  function openAuthorModal() {
+    document.getElementById('authorModal').style.display = 'flex';
+  }
+
+  function closeAuthorModal(e) {
+    if (e.target.id === 'authorModal') {
+      document.getElementById('authorModal').style.display = 'none';
+    }
+  }
+
+  async function updateStats() {
+    try {
+      const res = await fetch('/api/stats');
+      const data = await res.json();
+
+      document.getElementById('ram-txt').innerText = `${data.ram.used_gb} / ${data.ram.total_gb} GB (${data.ram.percent}%)`;
+      const ramFill = document.getElementById('ram-fill');
+      ramFill.style.width = data.ram.percent + '%';
+      ramFill.className = 'stat-fill' + (data.ram.percent > 85 ? ' crit' : data.ram.percent > 70 ? ' warn' : '');
+    } catch(e) {}
+  }
+  setInterval(updateStats, 1500);
+  updateStats();
+
+  dropzone.onclick = () => fileInput.click();
+  fileInput.onchange = () => {
+    if (fileInput.files.length) {
+      document.getElementById('file-label').innerText = fileInput.files[0].name;
+    }
+  };
+
+  ['dragenter', 'dragover'].forEach(e => {
+    dropzone.addEventListener(e, (ev) => { ev.preventDefault(); dropzone.classList.add('dragover'); });
+  });
+  ['dragleave', 'drop'].forEach(e => {
+    dropzone.addEventListener(e, (ev) => { ev.preventDefault(); dropzone.classList.remove('dragover'); });
+  });
+  dropzone.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files.length && e.dataTransfer.files[0].type === 'application/pdf') {
+      fileInput.files = e.dataTransfer.files;
+      document.getElementById('file-label').innerText = e.dataTransfer.files[0].name;
+    }
+  });
+
+  async function triggerPurge() {
+    if (!confirm("Flush RAM and restart services?")) return;
+    await fetch('/api/purge', { method: 'POST' });
+    setTimeout(() => window.location.reload(), 2000);
+  }
+
+  async function renderSlide(pageNum) {
+    if (!origDoc || !modDoc) return;
+    
+    document.getElementById('slide-counter').innerText = `Slide ${pageNum} of ${totalSlides}`;
+    document.getElementById('title-left').innerText = `🖼️ Original Scan (Slide ${pageNum})`;
+    document.getElementById('title-right').innerText = `✨ Modified Vector (Slide ${pageNum})`;
+
+    document.getElementById('btn-prev').disabled = (pageNum <= 1);
+    document.getElementById('btn-next').disabled = (pageNum >= totalSlides);
+
+    const p1 = await origDoc.getPage(pageNum);
+    const vp1 = p1.getViewport({ scale: 1.5 });
+    const c1 = document.getElementById('canvas-left');
+    c1.width = vp1.width; c1.height = vp1.height;
+    await p1.render({ canvasContext: c1.getContext('2d'), viewport: vp1 }).promise;
+
+    const p2 = await modDoc.getPage(pageNum);
+    const vp2 = p2.getViewport({ scale: 1.5 });
+    const c2 = document.getElementById('canvas-right');
+    c2.width = vp2.width; c2.height = vp2.height;
+    await p2.render({ canvasContext: c2.getContext('2d'), viewport: vp2 }).promise;
+  }
+
+  function prevSlide() {
+    if (currentSlide > 1) {
+      currentSlide--;
+      renderSlide(currentSlide);
+    }
+  }
+
+  function nextSlide() {
+    if (currentSlide < totalSlides) {
+      currentSlide++;
+      renderSlide(currentSlide);
+    }
+  }
+
+  btn.onclick = async () => {
+    if (!fileInput.files.length) return alert('Please attach a scanned PDF first!');
+
+    btn.disabled = true;
+    document.getElementById('prog-wrap').style.display = 'block';
+    document.getElementById('previews').style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    try {
+      const res = await fetch('/api/ocr-process', { method: 'POST', body: formData });
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const chunks = decoder.decode(value).split('\n\n');
+        for (const chunk of chunks) {
+          if (chunk.startsWith('data: ')) {
+            const data = JSON.parse(chunk.replace('data: ', ''));
+
+            if (data.type === 'progress') {
+              document.getElementById('prog-bar').style.width = data.value + '%';
+              document.getElementById('prog-num').innerText = data.value + '%';
+              document.getElementById('prog-info').innerText = data.info;
+            } else if (data.type === 'done') {
+              document.getElementById('prog-bar').style.width = '100%';
+              document.getElementById('prog-num').innerText = '100%';
+              document.getElementById('prog-info').innerText = 'Extraction Complete!';
+              btn.disabled = false;
+
+              document.getElementById('dl-mod').href = data.modified;
+              document.getElementById('previews').style.display = 'block';
+
+              const [loadedOrig, loadedMod] = await Promise.all([
+                pdfjsLib.getDocument(data.original).promise,
+                pdfjsLib.getDocument(data.modified).promise
+              ]);
+
+              origDoc = loadedOrig;
+              modDoc = loadedMod;
+              totalSlides = Math.min(origDoc.numPages, modDoc.numPages);
+              currentSlide = 1;
+              renderSlide(currentSlide);
+
+              setTimeout(() => {
+                document.getElementById('previews').scrollIntoView({ behavior: 'smooth' });
+              }, 150);
+            } else if (data.type === 'error') {
+              alert('Error: ' + data.message);
+              btn.disabled = false;
+            }
+          }
+        }
+      }
+    } catch(err) {
+      alert('Network request failed: ' + err.message);
+      btn.disabled = false;
+    }
+  };
+</script>
+</body>
+</html>
