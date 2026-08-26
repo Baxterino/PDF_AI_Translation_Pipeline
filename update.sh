@@ -4,19 +4,6 @@ set -e
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_DIR"
 
-LOCK_FILE="/tmp/pipeline_updating.lock"
-
-# Concurrency check
-if [ -f "$LOCK_FILE" ]; then
-    echo "[$(date)] Update already in progress. Exiting duplicate process."
-    exit 0
-fi
-
-touch "$LOCK_FILE"
-trap 'rm -f "$LOCK_FILE"' EXIT
-
-exec >> "$REPO_DIR/update.log" 2>&1
-
 echo "[$(date)] === 1. Fetching Latest Changes from GitHub ==="
 git config --global --add safe.directory "*" 2>/dev/null || true
 

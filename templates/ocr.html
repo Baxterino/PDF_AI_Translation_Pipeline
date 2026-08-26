@@ -189,7 +189,8 @@
     <div class="modal-title" id="updateModalTitle">Check for Updates</div>
     <p style="font-size: 0.88rem; color: #94a3b8; margin: 0.75rem 0;" id="updateModalMsg">Checking repository status...</p>
     <div id="updateActionWrap" style="display: none; margin-top: 1rem;">
-      <button class="modal-btn-action" id="btnInstallUpdate" onclick="applyUpdate()">Install & Rebuild</button>
+      <!-- <button class="modal-btn-action" id="btnInstallUpdate" onclick="applyUpdate()">Install & Rebuild</button> -->
+      <p style="font-size: 0.88rem; color: #94a3b8; margin: 0.75rem 0;" id="updateModalMsg">Write these commands in terminal:<br>1. "cd ~"<br>2. "cd PDF_AI_Translation_Pipeline"<br>3. "sudo chmod +x update.sh"<br>4. "sudo ./update.sh"</p>
     </div>
     <button class="modal-close" onclick="document.getElementById('updateModal').style.display='none'">Close</button>
   </div>
@@ -234,7 +235,9 @@
     document.getElementById('updateModal').style.display = 'flex';
   }
 
-  async function applyUpdate() {
+
+
+  /* async function applyUpdate() {
     document.getElementById('updateModalTitle').innerText = "Installing Update...";
     document.getElementById('updateModalMsg').innerText = "Pulling repository changes and rebuilding containers. This page will reload when complete...";
     document.getElementById('updateActionWrap').style.display = 'none';
@@ -247,8 +250,10 @@
         if (res.ok) { clearInterval(check); window.location.reload(); }
       } catch(e) {}
     }, 2000);
-  }
+  } */
 
+
+  
   function openAuthorModal() {
     document.getElementById('authorModal').style.display = 'flex';
   }

@@ -227,6 +227,7 @@ async def check_update():
         "message": "Could not connect to GitHub repository."
     })
 
+"""
 @app.post("/api/apply-update")
 async def apply_update():
     if os.path.exists(UPDATE_LOCK_FILE):
@@ -249,6 +250,7 @@ async def apply_update():
         "status": "updating",
         "message": "Update initiated! Rebuilding containers..."
     })
+"""
 
 @app.post("/api/purge")
 async def purge_system():
