@@ -22,6 +22,6 @@ docker compose build --no-cache pdf-translator
 docker compose up -d --remove-orphans
 
 echo "[$(date)] === 3. Cleaning up dangling images ==="
-docker image prune -f
+docker image prune -a -f
 
 echo "[$(date)] === Update Completed Successfully! ==="
